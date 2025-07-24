@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv8 Defect Segmentation</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; margin: 2rem; }
+        h1 { color: #1c1e21; }
+        .container { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; justify-content: center; }
+        .image-box { border: 2px dashed #ccc; padding: 1rem; border-radius: 8px; background-color: white; text-align: center; }
+        img { max-width: 400px; max-height: 600px; border-radius: 4px; }
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 1rem; }
+        input[type="file"] { border: 1px solid #ddd; padding: 8px; border-radius: 4px; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 16px; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #0056b3; }
+        #status { margin-top: 1rem; font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Mobile Phone Defect Segmentation</h1>
+    <p>Upload an image to detect screen cracks.</p>
+
+    <div class="controls">
+        <input type="file" id="imageUpload" accept="image/*">
+        <button id="predictButton">Detect Defects</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="container">
+        <div class="image-box">
+            <h3>Original Image</h3>
+            <img id="originalImage" src="" alt="Your uploaded image will appear here.">
+        </div>
+        <div class="image-box">
+            <h3>Detection Result</h3>
+            <img id="resultImage" src="" alt="Detection results will appear here.">
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const predictButton = document.getElementById('predictButton');
+        const originalImage = document.getElementById('originalImage');
+        const resultImage = document.getElementById('resultImage');
+        const status = document.getElementById('status');
+
+        let uploadedFile = null;
+
+        // Display the selected image
+        imageUpload.addEventListener('change', (event) => {
+            uploadedFile = event.target.files[0];
+            if (uploadedFile) {
+                originalImage.src = URL.createObjectURL(uploadedFile);
+                resultImage.src = ""; // Clear previous result
+                status.textContent = "Image ready. Click 'Detect Defects'.";
+            }
+        });
+
+        // Send the image to the backend for prediction
+        predictButton.addEventListener('click', async () => {
+            if (!uploadedFile) {
+                status.textContent = "Please upload an image first!";
+                return;
+            }
+
+            status.textContent = "Detecting, please wait...";
+
+            const formData = new FormData();
+            formData.append('file', uploadedFile); // 'file' must match the FastAPI parameter name
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const imageBlob = await response.blob();
+                    resultImage.src = URL.createObjectURL(imageBlob);
+                    status.textContent = "Detection complete!";
+                } else {
+                    const error = await response.json();
+                    status.textContent = `Error: ${error.detail || 'Prediction failed.'}`;
+                }
+            } catch (error) {
+                status.textContent = "An error occurred. Check the console.";
+                console.error("Fetch error:", error);
+            }
+        });
+    </script>
+</body>
+</html>

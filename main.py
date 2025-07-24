@@ -1,0 +1,43 @@
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import StreamingResponse, FileResponse
+from ultralytics import YOLO
+import cv2
+import numpy as np
+import io
+
+app = FastAPI(title="YOLOv8 Object Detection API")
+
+try:
+    model = YOLO("best_3.pt")  
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
+
+@app.get("/", include_in_schema=False)
+async def read_root():
+    """
+    Servers the main index.html file."""
+    return FileResponse("index.html")
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)):
+    """
+    Accepts an image file and returns the detected objects with bounding boxes.
+    """
+    if not model:
+        return {"error": "Model Note be loaded. Please check the server logs."}
+    
+    contents = await file.read()
+
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    results = model(img)
+
+    result_plotted = results[0].plot()
+
+    _, buffer = cv2.imencode('.jpg', result_plotted)
+
+    return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/jpeg")
+

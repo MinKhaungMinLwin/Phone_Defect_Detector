@@ -1,0 +1,4 @@
+
+ultralytics==8.3.168
+fastapi
+uvicorn
