@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import io
+import base64
 
 app = FastAPI(title="YOLOv8 Object Detection API")
 # Define allowed origins
@@ -48,9 +49,15 @@ async def predict(file: UploadFile = File(...)):
 
     results = model(img)
 
+    detection_count = len(results[0].boxes) if results[0].masks is not None else 0
+
     result_plotted = results[0].plot()
 
     _, buffer = cv2.imencode('.jpg', result_plotted)
+    img_base64 = base64.b64encode(buffer).decode('utf-8')
 
-    return StreamingResponse(io.BytesIO(buffer.tobytes()), media_type="image/jpeg")
+    return {
+        "detection_count": detection_count,
+        "image_base64": f"data:image/jpeg;base64,{img_base64}"
+    }
 

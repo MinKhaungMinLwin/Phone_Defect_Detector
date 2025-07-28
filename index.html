@@ -97,6 +97,28 @@
             animation: scan 2s linear infinite alternate;
             opacity: 0.8;
         }
+        /* ...NEW: Detection Message Box Styles ... */
+        .detection-message {
+            display: none;
+            width: 80%;
+            max-width: 600px;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: var(--primary-purple);
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            border: 2px solid var(--hover-purple);
+            box-shadow: 0 0 15px var(--hover-purple);
+        }
+
+        .detection-message.detected {
+            background-color: var(--danger-red);
+            border-color: var(--hover-red);
+            box-shadow: 0 0 15px var(--danger-red);
+        }
+        
         .controls { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 1rem; }
         input[type="file"] { border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; background-color: var(--dark-surface); color: var(--light-text); }
         button {
@@ -141,6 +163,9 @@
     </div>
 
     <div id="status"></div>
+
+    <div id="detectionMessage" class="detection-message"></div>
+
 
     <!-- ===== Upload Section ===== -->
     <div id="upload" class="content-section active">
@@ -187,6 +212,7 @@
         // --- Common DOM elements ---
         const status = document.getElementById('status');
         const webcamOverlay = document.getElementById('webcamOverlay');
+        const detectionMessage = document.getElementById('detectionMessage');
 
         // --- Tab Switching Logic ---
         function switchTab(tabName) {
@@ -195,6 +221,7 @@
             document.getElementById(tabName).classList.add('active');
             document.querySelector(`.tab-button[onclick="switchTab('${tabName}')"]`).classList.add('active');
             status.textContent = "";
+            detectionMessage.style.display = 'none';
             stopWebcam(); // Stop webcam when switching tabs
         }
 
@@ -212,6 +239,7 @@
             if (uploadedFile) {
                 originalImage.src = URL.createObjectURL(uploadedFile);
                 resultImage.src = "";
+                detectionMessage.style.display = 'none';
                 status.textContent = "Image ready. Click 'Detect from File'.";
             }
         });
@@ -222,6 +250,7 @@
                 return;
             }
             status.textContent = "Detecting, please wait...";
+            detectionMessage.style.display = 'none'; // Hide previous messages
             predictButton.disabled = true;
             await sendFrameForPrediction(uploadedFile, resultImage);
             predictButton.disabled = false;
@@ -278,6 +307,7 @@
                 return;
             }
             status.textContent = "Capturing and detecting...";
+            detectionMessage.style.display = 'none';
             captureButton.disabled = true;
 
             // Create a canvas to draw the video frame on
@@ -308,9 +338,22 @@
                 });
 
                 if (response.ok) {
-                    const blob = await response.blob();
-                    resultElement.src = URL.createObjectURL(blob);
+                    const data = await response.json();
+
+                    resultElement.src = data.image_base64; // Use the base64 image from the response
                     status.textContent = "Detection complete!";
+
+                    detectionMessage.classList.remove('detected');
+
+                    if (data.detection_count > 0) {
+                        detectionMessage.textContent = `AI Detection: ${data.detection_count} crack(s) have been detected.`;
+                        detectionMessage.classList.add('detected'); // Add class for red styling
+                    } else {
+                        detectionMessage.textContent = "AI Detection: No cracks have been detected.";
+                    }
+                    detectionMessage.style.display = 'block'; // Make the message box visible
+
+                
                 } else {
                     const error = await response.json();
                     status.textContent = `Error: ${error.detail || 'Prediction failed.'}`;
