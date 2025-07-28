@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from ultralytics import YOLO
 import cv2
@@ -6,6 +7,18 @@ import numpy as np
 import io
 
 app = FastAPI(title="YOLOv8 Object Detection API")
+# Define allowed origins
+origins = ["*"] # This allows all origins
+
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,        # List of allowed origins
+    allow_credentials=True,       # Allow cookies to be included in requests
+    allow_methods=["*"],          # Allow all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],          # Allow all headers
+)
 
 try:
     model = YOLO("best_3.pt")  
