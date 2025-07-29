@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from ultralytics import YOLO
 import cv2
 import numpy as np
@@ -40,7 +40,10 @@ async def predict(file: UploadFile = File(...)):
     Accepts an image file and returns the detected objects with bounding boxes.
     """
     if not model:
-        return {"error": "Model Note be loaded. Please check the server logs."}
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Model not loaded. Please check the server logs."}
+        )
     
     contents = await file.read()
 
@@ -56,8 +59,14 @@ async def predict(file: UploadFile = File(...)):
     _, buffer = cv2.imencode('.jpg', result_plotted)
     img_base64 = base64.b64encode(buffer).decode('utf-8')
 
-    return {
+    response_content = {
         "detection_count": detection_count,
         "image_base64": f"data:image/jpeg;base64,{img_base64}"
     }
 
+    if detection_count > 0:
+        # Cracks were detected. Return 202 Accepted.
+        return JSONResponse(status_code=202, content=response_content)
+    else:
+        # No cracks detected. Return 200 OK.
+        return JSONResponse(status_code=200, content=response_content)
