@@ -50,7 +50,7 @@ async def predict(file: UploadFile = File(...)):
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    results = model(img)
+    results = model(img, conf=0.5)
 
     detection_count = len(results[0].boxes) if results[0].masks is not None else 0
 
